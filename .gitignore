@@ -1,0 +1,8 @@
+.env
+*.env
+*.mp3
+*.wav
+*.pcm
+node_modules/
+.DS_Store
+Thumbs.db
