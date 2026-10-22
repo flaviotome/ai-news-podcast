@@ -7,10 +7,15 @@
 | Item | Estado em 2026-10-22 |
 |---|---|
 | Repositório | [flaviotome/ai-news-podcast](https://github.com/flaviotome/ai-news-podcast), público, com `main` e `gh-pages` |
-| GitHub Pages | A ligar na `gh-pages` |
+| GitHub Pages | No ar, servindo a `gh-pages` |
 | Pasta local | Clone do repositório, branch `main` |
 | URL do feed (definitiva) | `https://flaviotome.github.io/ai-news-podcast/feed.xml` |
-| VM | Hostinger, com n8n em Docker já rodando e exposto |
+| VM | Hostinger, Ubuntu 24.04, 3,8 GB de RAM, 43 GB livres. Docker 29.3, Compose v5.1 |
+| n8n | 2.14.2, imagem `docker.n8n.io/n8nio/n8n` sem tag fixa, atrás de Traefik. Compose em `/docker/n8n/docker-compose.yml` (template da Hostinger) |
+| Imagem do n8n | "Docker Hardened Images (Alpine)": sem `apk`/`apt-get`, sem ffmpeg; tem `git` |
+| Pastas | Volume `n8n_data` em `/home/node/.n8n`; host `/local-files` montado em `/files` |
+| Fuso global | `GENERIC_TIMEZONE=Europe/Berlin` (usado por outros workflows; não mexer) |
+| Outros containers | `whatsapp-mcp` em `/opt/whatsapp-mcp` (fora do escopo) |
 | Acesso à VM | Sem SSH para o Claude: todo comando na VM é entregue para o Flávio copiar e colar |
 
 A URL do feed fica fixa a partir daqui. Se um domínio próprio entrar depois, o GitHub redireciona com 301.
@@ -42,8 +47,7 @@ Um repositório, duas branches com papéis separados:
 main                       # código e documentação (versionado por mim)
 ├── docs/                  # discovery + este plano
 ├── infra/
-│   ├── Dockerfile         # n8n + ffmpeg/ffprobe
-│   └── docker-compose.yml # env vars do n8n (sem segredos)
+│   └── docker-compose.override.yml # o que mudamos no compose da Hostinger
 ├── workflows/
 │   └── daily-episode.json # export do workflow do n8n (fonte da verdade)
 └── prompts/
@@ -79,6 +83,9 @@ Detalhes que o discovery deixou em aberto, com a escolha proposta:
 | Áudio | ffmpeg: PCM 24 kHz do Gemini → `loudnorm` (-16 LUFS) → MP3 64 kbps mono | Volume consistente entre episódios, ~1,4 MB por episódio |
 | Crescimento do repositório | Mensalmente, recriar a `gh-pages` como um commit sem pais (mesma tree) e forçar o ref | MP3 apagados pela retenção somem do histórico; o repositório não cresce ~500 MB/ano |
 | Alerta de "não rodou" | Opcional: ping no healthchecks.io (free) ao final de cada execução | O Error Trigger não dispara se a VM ou o n8n estiverem fora do ar |
+| ffmpeg | Binários estáticos (`mwader/static-ffmpeg`) em `/local-files/bin`, vistos pelo n8n como `/files/bin/ffmpeg` | A imagem hardened não tem gerenciador de pacotes. Sem imagem customizada para manter e sem rebuild a cada upgrade do n8n |
+| Mudanças no compose | `docker-compose.override.yml` ao lado do arquivo da Hostinger | O arquivo original fica intacto; rollback é apagar o override |
+| Fuso do podcast | Definido nas configurações do próprio workflow (America/Sao_Paulo) | O fuso global (Berlin) atende outros workflows. A janela de 24h usa timestamps absolutos, então o fuso só afeta o horário do cron e a data do episódio |
 
 ## 4. Fases
 
@@ -86,19 +93,22 @@ Detalhes que o discovery deixou em aberto, com a escolha proposta:
 
 - [x] `git init`, mover o discovery para `docs/`, primeiro push no `main`.
 - [x] Criar a branch órfã `gh-pages` com `.nojekyll` e `index.html`.
-- [ ] Ligar o Pages na `gh-pages` (Settings → Pages → Deploy from a branch → `gh-pages` / root).
-- [ ] Levantar a VM com comandos só de leitura: SO, versão do n8n, onde está o compose, imagem, se já há ffmpeg, variáveis relevantes e fuso.
+- [x] Ligar o Pages na `gh-pages` (Settings → Pages → Deploy from a branch → `gh-pages` / root).
+- [x] Levantar a VM com comandos só de leitura: SO, versão do n8n, onde está o compose, imagem, se já há ffmpeg, variáveis relevantes e fuso.
 - [ ] Spike de 30 minutos no AI Studio: confirmar cotas atuais do Gemini (texto e TTS) e ouvir pares de vozes.
 
 **Pronto quando:** `https://flaviotome.github.io/ai-news-podcast/` responde 200 e as cotas do free tier estão anotadas.
 
 ### Fase 1: infraestrutura da VM
 
-- [ ] `infra/Dockerfile`: imagem do n8n fixada numa versão + `ffmpeg`/`ffprobe`. Se a imagem não tiver gerenciador de pacotes, build multi-stage copiando um ffmpeg estático.
-- [ ] Variáveis: `GENERIC_TIMEZONE`, `TZ`, `NODES_EXCLUDE` liberando o Execute Command, e pasta de trabalho do áudio dentro do diretório permitido ao n8n (n8n 2.x restringe acesso a arquivos).
+- [x] `ffmpeg` e `ffprobe` 7.1 estáticos em `/local-files/bin`.
+- [x] Pasta de trabalho `/local-files/podcast`, com dono = usuário do container do n8n.
+- [x] [`infra/docker-compose.override.yml`](../infra/docker-compose.override.yml) em `/docker/n8n`: fixa a imagem em 2.14.2, libera o Execute Command (`NODES_EXCLUDE=[]`) e permite arquivos em `/files` (`N8N_RESTRICT_FILE_ACCESS_TO`).
 - [ ] Credenciais no n8n: Gemini API key, token fine-grained do GitHub (Contents: read/write, só neste repositório) e bot do Telegram.
 
-**Pronto quando:** um workflow de teste roda `ffmpeg -version` e manda uma mensagem no Telegram.
+Rollback: `rm /docker/n8n/docker-compose.override.yml` e `docker compose up -d n8n` em `/docker/n8n`.
+
+**Pronto quando:** um workflow de teste roda `/files/bin/ffmpeg -version` num Execute Command e manda uma mensagem no Telegram.
 
 ### Fase 2: MVP do roteiro e do áudio (sem publicar)
 
@@ -142,7 +152,7 @@ Detalhes que o discovery deixou em aberto, com a escolha proposta:
 
 | Decisão | Bloqueia | Sugestão |
 |---|---|---|
-| Dados da VM (versão do n8n, como roda) | Fase 1 | Hostinger + Docker; detalhes vêm dos comandos de diagnóstico |
+| ~~Dados da VM (versão do n8n, como roda)~~ | — | Levantado: ver seção 1 |
 | ~~Nomes dos hosts~~ | — | Decidido: Lucas e Sarah |
 | ~~Nome do podcast~~ | — | Decidido: Pod.AI |
 | Capa 3000x3000 | Fase 3 | Pode ser gerada por IA |

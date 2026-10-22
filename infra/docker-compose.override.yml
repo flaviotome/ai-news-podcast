@@ -1,0 +1,8 @@
+# Copy to /docker/n8n/ on the VM, next to the Hostinger docker-compose.yml.
+# Compose merges it automatically; rollback = delete this file and `docker compose up -d n8n`.
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.14.2
+    environment:
+      - NODES_EXCLUDE=[]
+      - N8N_RESTRICT_FILE_ACCESS_TO=/files

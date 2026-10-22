@@ -18,6 +18,6 @@ Podcast diário e 100% automático sobre as novidades de AI Engineering das últ
 | Pasta | Conteúdo |
 |---|---|
 | `docs/` | Discovery e plano |
-| `infra/` | Dockerfile e compose do n8n |
+| `infra/` | Override do compose do n8n na VM |
 | `workflows/` | Export do workflow do n8n |
 | `prompts/` | Prompts dos hosts e pool de temas |
