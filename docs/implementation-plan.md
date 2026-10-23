@@ -1,18 +1,35 @@
 # Plano de implantação
 
-> Base: [podcast-ai-engineering-plan.md](podcast-ai-engineering-plan.md). Última atualização: 2026-10-22.
+> Base: [podcast-ai-engineering-plan.md](podcast-ai-engineering-plan.md). Última atualização: 2026-10-23.
+
+## Status atual
+
+| Fase | Situação |
+|---|---|
+| 0. Fundação | Quase pronta. Falta anotar as cotas do Gemini e ouvir as vozes |
+| 1. Infraestrutura da VM | Infra pronta. Faltam as credenciais no n8n e o workflow de teste |
+| 2. Roteiro e áudio | Não iniciada (os prompts podem ser escritos antes de a Fase 1 fechar) |
+| 3–5 | Não iniciadas |
+
+**Próximos passos**
+
+1. Terminar a credencial do GitHub no n8n (User = `flaviotome` + token `n8n-podai`). Pausado pelo Flávio.
+2. Criar a chave do Gemini. A opção "Get API key" não apareceu no AI Studio; tentar `https://aistudio.google.com/apikey` ou criar pelo Cloud Console (Generative Language API → Credentials → API key).
+3. Criar o bot do Telegram (@BotFather), pegar o chat ID e cadastrar a credencial.
+4. Rodar o workflow de teste: Manual Trigger → Execute Command (`/files/bin/ffmpeg -hide_banner -version`) → Telegram.
+5. Começar a Fase 2 pelos prompts do Lucas e da Sarah e pelo pool de temas.
 
 ## 1. Ponto de partida
 
-| Item | Estado em 2026-10-22 |
+| Item | Estado em 2026-10-23 |
 |---|---|
 | Repositório | [flaviotome/ai-news-podcast](https://github.com/flaviotome/ai-news-podcast), público, com `main` e `gh-pages` |
 | GitHub Pages | No ar, servindo a `gh-pages` |
 | Pasta local | Clone do repositório, branch `main` |
 | URL do feed (definitiva) | `https://flaviotome.github.io/ai-news-podcast/feed.xml` |
 | VM | Hostinger, Ubuntu 24.04, 3,8 GB de RAM, 43 GB livres. Docker 29.3, Compose v5.1 |
-| n8n | 2.14.2, imagem `docker.n8n.io/n8nio/n8n` sem tag fixa, atrás de Traefik. Compose em `/docker/n8n/docker-compose.yml` (template da Hostinger) |
-| Imagem do n8n | "Docker Hardened Images (Alpine)": sem `apk`/`apt-get`, sem ffmpeg; tem `git` |
+| n8n | 2.14.2, fixada pelo override (no compose da Hostinger a imagem não tinha tag). Atrás de Traefik. Compose em `/docker/n8n/docker-compose.yml` (template da Hostinger) |
+| Imagem do n8n | "Docker Hardened Images (Alpine)": sem `apk`/`apt-get` e sem ffmpeg próprio; tem `git`. ffmpeg vem de `/files/bin` |
 | Pastas | Volume `n8n_data` em `/home/node/.n8n`; host `/local-files` montado em `/files` |
 | Fuso global | `GENERIC_TIMEZONE=Europe/Berlin` (usado por outros workflows; não mexer) |
 | Outros containers | `whatsapp-mcp` em `/opt/whatsapp-mcp` (fora do escopo) |
@@ -95,7 +112,7 @@ Detalhes que o discovery deixou em aberto, com a escolha proposta:
 - [x] Criar a branch órfã `gh-pages` com `.nojekyll` e `index.html`.
 - [x] Ligar o Pages na `gh-pages` (Settings → Pages → Deploy from a branch → `gh-pages` / root).
 - [x] Levantar a VM com comandos só de leitura: SO, versão do n8n, onde está o compose, imagem, se já há ffmpeg, variáveis relevantes e fuso.
-- [ ] Spike de 30 minutos no AI Studio: confirmar cotas atuais do Gemini (texto e TTS) e ouvir pares de vozes.
+- [ ] Spike de 30 minutos no AI Studio: confirmar cotas atuais do Gemini (texto e TTS) e ouvir pares de vozes. Depende da chave do Gemini (ver Fase 1).
 
 **Pronto quando:** `https://flaviotome.github.io/ai-news-podcast/` responde 200 e as cotas do free tier estão anotadas.
 
@@ -104,9 +121,24 @@ Detalhes que o discovery deixou em aberto, com a escolha proposta:
 - [x] `ffmpeg` e `ffprobe` 7.1 estáticos em `/local-files/bin`.
 - [x] Pasta de trabalho `/local-files/podcast`, com dono = usuário do container do n8n.
 - [x] [`infra/docker-compose.override.yml`](../infra/docker-compose.override.yml) em `/docker/n8n`: fixa a imagem em 2.14.2, libera o Execute Command (`NODES_EXCLUDE=[]`) e permite arquivos em `/files` (`N8N_RESTRICT_FILE_ACCESS_TO`).
-- [ ] Credenciais no n8n: Gemini API key, token fine-grained do GitHub (Contents: read/write, só neste repositório) e bot do Telegram.
+- [ ] Credencial "GitHub API" no n8n: Server `https://api.github.com`, User `flaviotome`, token fine-grained `n8n-podai` (só `ai-news-podcast`, Contents: read/write, validade de 1 ano). Em andamento.
+- [ ] Credencial "Google Gemini (PaLM) API" no n8n. A chave ainda não foi criada.
+- [ ] Credencial "Telegram API" no n8n (bot via @BotFather) e chat ID anotado.
+- [ ] Workflow de teste: Manual Trigger → Execute Command → Telegram.
+
+Alterações feitas na VM em 2026-10-22, todas verificadas:
+
+| O quê | Onde |
+|---|---|
+| Imagem `mwader/static-ffmpeg:7.1` baixada (só para extrair os binários) | Docker local |
+| `ffmpeg` e `ffprobe` 7.1 (~135 MB cada), `root:root`, 755 | `/local-files/bin` → `/files/bin` no container |
+| Pasta de trabalho do áudio, dono `ubuntu:ubuntu` (mesmo UID do usuário do n8n) | `/local-files/podcast` → `/files/podcast` |
+| Override com imagem 2.14.2, `NODES_EXCLUDE=[]` e `N8N_RESTRICT_FILE_ACCESS_TO=/files` | `/docker/n8n/docker-compose.override.yml` |
+| Container `n8n-n8n-1` recriado com o override | `docker compose up -d n8n` |
 
 Rollback: `rm /docker/n8n/docker-compose.override.yml` e `docker compose up -d n8n` em `/docker/n8n`.
+
+Com o Execute Command ligado, quem entra no n8n consegue rodar comandos no container. Como o n8n está exposto na internet, a conta precisa de senha forte e, se possível, 2FA.
 
 **Pronto quando:** um workflow de teste roda `/files/bin/ffmpeg -version` num Execute Command e manda uma mensagem no Telegram.
 
@@ -123,7 +155,8 @@ Rollback: `rm /docker/n8n/docker-compose.override.yml` e `docker compose up -d n
 
 ### Fase 3: publicação
 
-- [ ] Nomes, capa e e-mail definidos (ver seção 5).
+- [x] Nome do podcast, hosts e e-mail do dono definidos (ver seção 1).
+- [ ] Capa 3000x3000.
 - [ ] Ler `state.json` da `gh-pages` no início do fluxo; usar para o dedup histórico.
 - [ ] Gerar `feed.xml` (RSS 2.0 + tags iTunes, `itunes:duration`, `enclosure length` em bytes, show notes com as fontes e aviso de conteúdo gerado por IA).
 - [ ] Commit atômico na `gh-pages`.
