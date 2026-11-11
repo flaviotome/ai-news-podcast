@@ -8,12 +8,12 @@
 |---|---|
 | 0. Fundação | Quase pronta. Falta anotar as cotas do Gemini |
 | 1. Infraestrutura da VM | Pronta, exceto o Telegram. GitHub, Gemini (texto e TTS) e ffmpeg validados num workflow de teste em 2026-10-23 |
-| 2. Roteiro e áudio | Em andamento. Workflow [`daily-episode.json`](../workflows/daily-episode.json) e prompts prontos e testados localmente; falta importar no n8n e rodar |
+| 2. Roteiro e áudio | Em andamento. Workflow [`daily-episode.json`](../workflows/daily-episode.json) importado; a coleta já rodou no servidor. Falta a primeira execução completa, que precisa ser feita pela interface |
 | 3–5 | Não iniciadas |
 
 **Próximos passos**
 
-1. Push do `main` (o workflow baixa os prompts do GitHub) e importação do workflow no n8n.
+1. Reimportar o workflow na VPS (a versão de 2026-11-11 20:32 tem o bug das fontes, ver Fase 2) e rodar pela interface do n8n, a partir de uma rede que a acesse.
 2. Rodar o workflow manualmente por alguns dias, ouvir os episódios e ajustar prompts e vozes.
 3. Adiados a pedido do Flávio: bot do Telegram e cotas do free tier do Gemini. Sem as cotas, o risco é estourar o limite do TTS em dias de muitos testes.
 4. Decidir o destino do workflow vazio "AI News Podcast v1" (`SOVnvLkWqicYtaIK`): apagar, já que o diário é um workflow novo.
@@ -174,12 +174,22 @@ Com o Execute Command ligado, quem entra no n8n consegue rodar comandos no conta
 - [x] Validação: falantes, mínimo de 8 falas, 350–450 palavras no total. Até 3 tentativas, devolvendo ao modelo o motivo da reprovação.
 - [x] Dia parado (< 3 itens): tema do `topics.json` escolhido pelo número do dia, então não se repete em menos de 30 dias. Sem estado.
 - [x] TTS multi-speaker → PCM → MP3 em disco, com o relatório do episódio em `.json` ao lado.
-- [ ] Importar no n8n e rodar a primeira vez.
+- [x] Importar no n8n (2026-11-11). Primeira execução via `n8n execute`: coleta OK, parou no Gemini (ver "Como rodar" abaixo).
+- [x] Corrigir a identificação da fonte dos itens RSS. O nó RSS do n8n não preserva de qual feed veio cada item (o `pairedItem` aponta para a posição do item no feed), o que trocava os rótulos e descartava a maior parte dos itens. Agora a fonte vem do domínio do link.
+- [ ] Primeira execução completa, pela interface.
 - [ ] Rodar manualmente por alguns dias e ouvir. Ajustar prompt e vozes.
 
 Fontes RSS (nó "Fontes"): Simon Willison, Hugging Face, OpenAI, Google AI, Google for Developers, GitHub (AI & ML), Ollama, Latent Space, Interconnects, Sebastian Raschka e r/LocalLLaMA. Ficaram de fora: Google DeepMind (o feed vem comprimido de um jeito que o nó RSS não lê), Anthropic e LangChain (sem feed público). A busca do hnrss.org estava dando 502, por isso o Hacker News vem do Algolia.
 
 Limitação conhecida: itens do Hacker News e do Hugging Face chegam só com o título, e o modelo é instruído a não inventar detalhes. Se os roteiros ficarem rasos, o próximo passo é buscar a descrição (meta tags) das páginas escolhidas.
+
+**Como rodar.** Pela interface do n8n: abrir "Pod.AI - episódio diário" e clicar em Execute workflow. O `n8n execute` pela linha de comando **não serve**: na 2.14.2, o processo avulso não consegue usar credenciais (`Cannot query license state because license provider has not been set`), então tudo que depende do Gemini falha. Se for preciso rodar sem interface, a alternativa é um gatilho Webhook com o workflow publicado (`n8n publish:workflow` + restart) e um `curl` local; isso vai ser necessário de qualquer forma na Fase 5, para o cron. A interface do n8n não abre em todas as redes que o Flávio usa.
+
+Para reimportar depois de mudar o workflow no repositório (sobrescreve o mesmo ID):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/flaviotome/ai-news-podcast/main/workflows/daily-episode.json -o /local-files/podcast/daily-episode.json && docker exec n8n-n8n-1 n8n import:workflow --input=/files/podcast/daily-episode.json
+```
 
 Saída de cada execução em `/files/podcast/AAAA-MM-DD-HHMM.mp3` e `.json` (roteiro, fontes cobertas, estatísticas da coleta e avisos). O sufixo de hora evita sobrescrever episódios de teste do mesmo dia.
 
