@@ -19,5 +19,5 @@ Podcast diário e 100% automático sobre as novidades de AI Engineering das últ
 |---|---|
 | `docs/` | Discovery e plano |
 | `infra/` | Override do compose do n8n na VM |
-| `workflows/` | Export do workflow do n8n |
-| `prompts/` | Prompts dos hosts e pool de temas |
+| `workflows/` | Exports dos workflows do n8n (`daily-episode.json` e `test-infra.json`) |
+| `prompts/` | Prompts dos hosts, intro/outro e pool de temas (lidos pelo workflow a cada execução) |

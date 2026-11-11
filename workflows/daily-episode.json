@@ -1,0 +1,812 @@
+{
+  "id": "PodAiDailyEpisod",
+  "name": "Pod.AI - episódio diário",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Pod.AI - episódio diário (Fase 2)\nColeta → roteiro → áudio, **sem publicar**. Roda manualmente.\n\n- Ajustes no nó **Config** (modelos, vozes, faixa de palavras).\n- Prompts e temas vêm de `prompts/` na branch `main` do GitHub: edite lá, não aqui.\n- Saída em `/files/podcast/AAAA-MM-DD-HHMM.mp3` e `.json` (roteiro, fontes e estatísticas).\n- Fonte da verdade: `workflows/daily-episode.json` no repositório.",
+        "height": 260,
+        "width": 520
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000001",
+      "name": "Leia-me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -320
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000002",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000003",
+              "name": "timezone",
+              "value": "America/Sao_Paulo",
+              "type": "string"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000004",
+              "name": "windowHours",
+              "value": 24,
+              "type": "number"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000005",
+              "name": "hnMinPoints",
+              "value": 40,
+              "type": "number"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000006",
+              "name": "summaryChars",
+              "value": 500,
+              "type": "number"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000007",
+              "name": "maxItems",
+              "value": 10,
+              "type": "number"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000008",
+              "name": "minItems",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000009",
+              "name": "minWords",
+              "value": 350,
+              "type": "number"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000010",
+              "name": "maxWords",
+              "value": 450,
+              "type": "number"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000011",
+              "name": "minTurns",
+              "value": 8,
+              "type": "number"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000012",
+              "name": "maxAttempts",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000013",
+              "name": "textModel",
+              "value": "gemini-2.5-flash",
+              "type": "string"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000014",
+              "name": "ttsModel",
+              "value": "gemini-2.5-flash-preview-tts",
+              "type": "string"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000015",
+              "name": "voiceLucas",
+              "value": "Puck",
+              "type": "string"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000016",
+              "name": "voiceSarah",
+              "value": "Aoede",
+              "type": "string"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000017",
+              "name": "ttsStyle",
+              "value": "Read this aloud as a friendly, upbeat tech podcast. Lucas and Sarah are relaxed, smile while they talk and keep a natural pace:",
+              "type": "string"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000018",
+              "name": "promptsBaseUrl",
+              "value": "https://raw.githubusercontent.com/flaviotome/ai-news-podcast/main/prompts",
+              "type": "string"
+            },
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000019",
+              "name": "outDir",
+              "value": "/files/podcast",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000020",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://hn.algolia.com/api/v1/search_by_date?tags=story&hitsPerPage=200&numericFilters=' + encodeURIComponent('created_at_i>' + Math.floor(Date.now() / 1000 - $('Config').first().json.windowHours * 3600) + ',points>' + $('Config').first().json.hnMinPoints) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000021",
+      "name": "HN: Algolia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Feeds RSS/Atom lidos pelo nó \"RSS\". O Hacker News vem do nó \"HN: Algolia\".\n// weight: prioridade na seleção (3 = alta). max: máximo de itens desta fonte por episódio.\n// Fora da lista: Google DeepMind (o feed vem em gzip sem cabeçalho e o nó RSS não lê),\n// Anthropic e LangChain (sem feed RSS público).\nconst sources = [\n  { source: 'Simon Willison', url: 'https://simonwillison.net/atom/everything/', weight: 3, max: 2 },\n  { source: 'Hugging Face blog', url: 'https://huggingface.co/blog/feed.xml', weight: 3, max: 2 },\n  { source: 'OpenAI', url: 'https://openai.com/news/rss.xml', weight: 3, max: 2 },\n  { source: 'Google AI blog', url: 'https://blog.google/technology/ai/rss/', weight: 2, max: 1 },\n  { source: 'Google for Developers blog', url: 'https://developers.googleblog.com/feeds/posts/default', weight: 2, max: 1 },\n  { source: 'GitHub blog', url: 'https://github.blog/ai-and-ml/feed/', weight: 2, max: 1 },\n  { source: 'Ollama blog', url: 'https://ollama.com/blog/rss.xml', weight: 2, max: 1 },\n  { source: 'Latent Space', url: 'https://www.latent.space/feed', weight: 2, max: 1 },\n  { source: 'Interconnects', url: 'https://www.interconnects.ai/feed', weight: 2, max: 1 },\n  { source: 'Sebastian Raschka', url: 'https://magazine.sebastianraschka.com/feed', weight: 2, max: 1 },\n  { source: 'r/LocalLLaMA', url: 'https://www.reddit.com/r/LocalLLaMA/top/.rss?t=day', weight: 1, max: 2 },\n];\nreturn sources.map(s => ({ json: s }));"
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000022",
+      "name": "Fontes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000023",
+      "name": "RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        0
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Junta RSS + Hacker News, filtra a janela de 24h, limpa, deduplica e escolhe os melhores itens.\nconst cfg = $('Config').first().json;\nconst sources = $('Fontes').all().map(i => i.json);\nconst now = Date.now();\nconst since = now - cfg.windowHours * 3600e3;\n\n// Fase 3: trocar pela lista de URLs já cobertas, lida do state.json.\nconst coveredUrls = [];\n\nconst HN_KEYWORDS = /\\b(AI|LLMs?|GPT[\\w.-]*|ChatGPT|Claude|Gemini|Gemma|OpenAI|Anthropic|DeepMind|Mistral|Llama|llama\\.cpp|Qwen[\\w.-]*|DeepSeek[\\w.-]*|agents?|agentic|RAG|MCP|inference|transformers?|embeddings?|fine-?tun\\w*|vLLM|Ollama|Copilot|prompts?|tokenizers?|diffusion|distill\\w*|Mamba|neural|machine learning|ML|Hugging ?Face|evals?|benchmarks?)\\b/i;\n\nconst decode = s => s\n  .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')\n  .replace(/&quot;/g, '\"').replace(/&#0?39;|&apos;|&#x27;/g, \"'\").replace(/&#(\\d+);/g, (_, n) => String.fromCharCode(+n));\nconst clean = s => decode(String(s || '').replace(/<[^>]*>/g, ' ')).replace(/\\s+/g, ' ').trim();\nconst cut = (s, n) => (s.length > n ? s.slice(0, n).replace(/\\s+\\S*$/, '') + '...' : s);\nconst normUrl = u => {\n  try {\n    const x = new URL(u);\n    x.hash = '';\n    for (const k of [...x.searchParams.keys()]) if (/^(utm_|ref$|source$)/i.test(k)) x.searchParams.delete(k);\n    return (x.hostname.replace(/^www\\./, '') + x.pathname.replace(/\\/+$/, '') + x.search).toLowerCase();\n  } catch (e) {\n    return String(u || '').toLowerCase();\n  }\n};\nconst normTitle = t => clean(t).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();\nconst domain = u => { try { return new URL(u).hostname.replace(/^www\\./, ''); } catch (e) { return ''; } };\n\nconst stats = {};\nconst failed = [];\nconst candidates = [];\n\n// RSS: cada item aponta para a fonte de origem pelo pairedItem.\nfor (const it of $input.all()) {\n  const pi = Array.isArray(it.pairedItem) ? it.pairedItem[0] : it.pairedItem;\n  const src = sources[pi && typeof pi.item === 'number' ? pi.item : -1];\n  if (!src) continue;\n  const st = (stats[src.source] = stats[src.source] || { fetched: 0, recent: 0 });\n  if (it.json.error) {\n    failed.push(`${src.source}: ${String(it.json.error.message || it.json.error).slice(0, 150)}`);\n    continue;\n  }\n  if (!it.json.title || !it.json.link) continue;\n  st.fetched++;\n  const t = Date.parse(it.json.isoDate || it.json.pubDate || '');\n  if (!t || t < since || t > now + 3600e3) continue;\n  st.recent++;\n  candidates.push({\n    source: src.source,\n    weight: src.weight,\n    max: src.max,\n    title: clean(it.json.title),\n    url: it.json.link,\n    published: new Date(t).toISOString(),\n    summary: cut(clean(it.json.contentSnippet || it.json.content || it.json.summary)\n      .replace(/submitted by \\/u\\/\\S+|\\[(link|comments)\\]/gi, '').replace(/\\s+/g, ' ').trim(), cfg.summaryChars),\n  });\n}\n\n// Hacker News (Algolia): só histórias com palavras-chave de AI no título.\nconst hn = $('HN: Algolia').first().json;\nif (hn.error) failed.push(`Hacker News: ${String(hn.error.message || hn.error).slice(0, 150)}`);\nconst hits = Array.isArray(hn.hits) ? hn.hits : [];\nstats['Hacker News'] = { fetched: hits.length, recent: 0 };\nfor (const h of hits) {\n  if (!HN_KEYWORDS.test(h.title || '')) continue;\n  const t = (h.created_at_i || 0) * 1000;\n  if (t < since) continue;\n  stats['Hacker News'].recent++;\n  const discussion = `https://news.ycombinator.com/item?id=${h.objectID}`;\n  candidates.push({\n    source: 'Hacker News',\n    weight: h.points >= 300 ? 3 : h.points >= 100 ? 2 : 1,\n    max: 4,\n    title: clean(h.title),\n    url: h.url || discussion,\n    discussion,\n    published: new Date(t).toISOString(),\n    summary: '',\n    hnPoints: h.points,\n    hnComments: h.num_comments || 0,\n  });\n}\n\n// Seleção: maior peso primeiro, depois mais pontos no HN, depois mais recente.\ncandidates.sort((a, b) => b.weight - a.weight || (b.hnPoints || 0) - (a.hnPoints || 0) || b.published.localeCompare(a.published));\nconst covered = new Set(coveredUrls.map(normUrl));\nconst byUrl = new Map();\nconst byTitle = new Map();\nconst perSource = {};\nconst picked = [];\nfor (const c of candidates) {\n  const nu = normUrl(c.url);\n  const nt = normTitle(c.title);\n  if (covered.has(nu)) continue;\n  const dup = byUrl.get(nu) || (nt && byTitle.get(nt));\n  if (dup) {\n    // Mesma notícia em duas fontes: enriquece o item já escolhido.\n    if (!dup.summary && c.summary) dup.summary = c.summary;\n    if (c.hnPoints && !dup.hnPoints) Object.assign(dup, { hnPoints: c.hnPoints, hnComments: c.hnComments, discussion: c.discussion });\n    if (c.source !== dup.source && !(dup.alsoOn || []).includes(c.source)) dup.alsoOn = [...(dup.alsoOn || []), c.source];\n    continue;\n  }\n  if (picked.length >= cfg.maxItems || (perSource[c.source] || 0) >= c.max) continue;\n  perSource[c.source] = (perSource[c.source] || 0) + 1;\n  picked.push(c);\n  byUrl.set(nu, c);\n  if (nt) byTitle.set(nt, c);\n}\n\nconst items = picked.map((c, i) => ({\n  id: i + 1,\n  source: c.source,\n  ...(c.alsoOn ? { alsoOn: c.alsoOn } : {}),\n  title: c.title,\n  url: c.url,\n  domain: domain(c.url),\n  published: c.published,\n  summary: c.summary,\n  ...(c.hnPoints ? { hnPoints: c.hnPoints, hnComments: c.hnComments, discussion: c.discussion } : {}),\n}));\n\nconst date = new Intl.DateTimeFormat('en-CA', { timeZone: cfg.timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(now));\nreturn [{\n  json: {\n    date,\n    mode: items.length >= cfg.minItems ? 'news' : 'slow',\n    items,\n    candidates: candidates.length,\n    stats,\n    failed,\n  },\n}];"
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000024",
+      "name": "Trata notícias",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Os prompts moram no repositório (pasta prompts/ da branch main) e são baixados a cada execução.\nconst base = $('Config').first().json.promptsBaseUrl.replace(/\\/+$/, '');\nconst files = ['hosts.md', 'system-news.md', 'system-slow-day.md', 'show.json', 'topics.json'];\nreturn files.map(name => ({ json: { name, url: `${base}/${name}?t=${Date.now()}` } }));"
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000025",
+      "name": "Arquivos de prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000026",
+      "name": "Baixa prompts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Escolhe o modo (notícias ou dia parado), monta intro/outro fixos e a requisição do roteiro.\nconst cfg = $('Config').first().json;\nconst news = $('Trata notícias').first().json;\nconst names = $('Arquivos de prompt').all().map(i => i.json.name);\n\nconst files = {};\n$input.all().forEach((it, idx) => {\n  const pi = Array.isArray(it.pairedItem) ? it.pairedItem[0] : it.pairedItem;\n  const name = names[pi && typeof pi.item === 'number' ? pi.item : idx];\n  if (typeof it.json.data !== 'string' || !it.json.data.trim()) throw new Error(`Prompt vazio ou não baixado: ${name}`);\n  files[name] = it.json.data;\n});\nfor (const n of names) if (!files[n]) throw new Error(`Prompt não baixado: ${n}`);\nconst show = JSON.parse(files['show.json']);\nconst topics = JSON.parse(files['topics.json']);\n\nconst mode = news.mode;\nconst dateSpoken = new Intl.DateTimeFormat('en-US', { timeZone: cfg.timezone, weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());\n\n// Dia parado: tema escolhido pelo número do dia, então nenhum tema se repete em menos de topics.length dias.\nlet topic = null;\nif (mode === 'slow') {\n  const [y, m, d] = news.date.split('-').map(Number);\n  topic = topics[Math.floor(Date.UTC(y, m - 1, d) / 86400e3) % topics.length];\n}\n\nconst fill = s => s.replace('{DATE}', dateSpoken).replace('{TOPIC}', topic ? topic.title : '');\nconst toLines = arr => arr.map(([speaker, text]) => ({ speaker, text: fill(text) }));\nconst intro = toLines(show[mode === 'news' ? 'intro_news' : 'intro_slow']);\nconst outro = toLines(show[mode === 'news' ? 'outro_news' : 'outro_slow']);\n\n// Faixa de palavras pedida ao modelo: o total do episódio menos intro/outro, com folga de 20% de cada lado.\nconst words = s => s.split(/\\s+/).filter(Boolean).length;\nconst fixedWords = [...intro, ...outro].reduce((n, l) => n + words(l.text), 0);\nconst bodyMin = cfg.minWords - fixedWords;\nconst bodyMax = cfg.maxWords - fixedWords;\nconst margin = Math.round((bodyMax - bodyMin) * 0.2);\nconst vars = {\n  BODY_MIN_WORDS: bodyMin + margin,\n  BODY_MAX_WORDS: bodyMax - margin,\n  BODY_TARGET_WORDS: Math.round((bodyMin + bodyMax) / 2),\n};\nconst system = (files['hosts.md'] + '\\n\\n' + files[mode === 'news' ? 'system-news.md' : 'system-slow-day.md'])\n  .replace(/\\{\\{(\\w+)\\}\\}/g, (m, k) => (k in vars ? String(vars[k]) : m));\n\nlet user;\nif (mode === 'news') {\n  user = `Today is ${dateSpoken}. Candidate items from the last 24 hours:\\n\\n` + news.items.map(it => [\n    `[${it.id}] ${it.source}${it.alsoOn ? ` (also on ${it.alsoOn.join(', ')})` : ''}`,\n    `Title: ${it.title}`,\n    it.domain ? `Link domain: ${it.domain}` : null,\n    it.hnPoints ? `Hacker News: ${it.hnPoints} points, ${it.hnComments} comments` : null,\n    `Summary: ${it.summary || '(title only)'}`,\n  ].filter(Boolean).join('\\n')).join('\\n\\n');\n} else {\n  user = `Today is ${dateSpoken}.\\nTopic: ${topic.title}\\nSuggested angle: ${topic.angle}`;\n}\n\nconst request = {\n  systemInstruction: { parts: [{ text: system }] },\n  contents: [{ role: 'user', parts: [{ text: user }] }],\n  generationConfig: {\n    temperature: 0.9,\n    responseMimeType: 'application/json',\n    responseSchema: {\n      type: 'OBJECT',\n      properties: {\n        title: { type: 'STRING' },\n        summary: { type: 'STRING' },\n        covered: { type: 'ARRAY', items: { type: 'INTEGER' } },\n        lines: {\n          type: 'ARRAY',\n          items: {\n            type: 'OBJECT',\n            properties: {\n              speaker: { type: 'STRING', enum: ['Lucas', 'Sarah'] },\n              text: { type: 'STRING' },\n            },\n            required: ['speaker', 'text'],\n          },\n        },\n      },\n      required: ['title', 'summary', 'covered', 'lines'],\n      propertyOrdering: ['title', 'summary', 'covered', 'lines'],\n    },\n  },\n};\n\nreturn [{ json: { mode, date: news.date, dateSpoken, topic, intro, outro, bodyWords: vars, request } }];"
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000027",
+      "name": "Monta prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Monta o corpo da chamada do roteiro. Numa nova tentativa, devolve ao modelo o motivo da reprovação.\nconst base = $('Monta prompt').first().json.request;\nconst prev = $input.first().json;\nconst body = JSON.parse(JSON.stringify(base));\nif (Array.isArray(prev.errors) && prev.errors.length) {\n  if (prev.rawText) body.contents.push({ role: 'model', parts: [{ text: prev.rawText }] });\n  body.contents.push({\n    role: 'user',\n    parts: [{ text: `Your previous script was rejected: ${prev.errors.join(' ')} Write a new script that fixes this and follows every rule.` }],\n  });\n}\nreturn [{ json: { body, attempt: $runIndex + 1 } }];"
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000028",
+      "name": "Prepara chamada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/' + $('Config').first().json.textModel + ':generateContent' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000029",
+      "name": "Gemini: roteiro",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "cJoCH4qpvsCDlSKg",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Guardrails do roteiro: JSON válido, falantes certos, número de falas e de palavras.\nconst cfg = $('Config').first().json;\nconst mp = $('Monta prompt').first().json;\nconst news = $('Trata notícias').first().json;\nconst res = $input.first().json;\n\nconst words = s => s.split(/\\s+/).filter(Boolean).length;\nconst cleanText = s => String(s || '')\n  .replace(/https?:\\/\\/\\S+/g, '')\n  .replace(/\\((?:laugh|chuckl|sigh|paus|smil|giggl)[^)]*\\)|\\[[^\\]]*\\]/gi, '')\n  .replace(/[*_#`~]/g, '')\n  .replace(/[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}]/gu, '')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nconst errors = [];\nlet rawText = '';\nlet parsed = null;\nconst cand = res.candidates && res.candidates[0];\nif (res.error) {\n  errors.push(`API error: ${JSON.stringify(res.error).slice(0, 300)}`);\n} else if (!cand) {\n  errors.push(`No candidate in the response: ${JSON.stringify(res.promptFeedback || res).slice(0, 300)}`);\n} else {\n  if (cand.finishReason && cand.finishReason !== 'STOP') errors.push(`The answer stopped early (${cand.finishReason}).`);\n  rawText = ((cand.content && cand.content.parts) || []).filter(p => !p.thought && typeof p.text === 'string').map(p => p.text).join('');\n  try {\n    parsed = JSON.parse(rawText);\n  } catch (e) {\n    errors.push('The output was not valid JSON.');\n  }\n}\n\nlet lines = [];\nlet wordCount = 0;\nlet covered = [];\nif (parsed) {\n  const body = [];\n  for (const l of Array.isArray(parsed.lines) ? parsed.lines : []) {\n    const speaker = String((l && l.speaker) || '').trim();\n    if (speaker !== 'Lucas' && speaker !== 'Sarah') {\n      errors.push(`Invalid speaker \"${speaker}\"; use only \"Lucas\" and \"Sarah\".`);\n      continue;\n    }\n    const text = cleanText(l.text);\n    if (text) body.push({ speaker, text });\n  }\n  if (body.length < cfg.minTurns) errors.push(`The script has only ${body.length} turns; write at least ${cfg.minTurns}.`);\n\n  // Junta falas seguidas do mesmo host (inclusive na emenda com a intro e a outro).\n  for (const l of [...mp.intro, ...body, ...mp.outro]) {\n    const last = lines[lines.length - 1];\n    if (last && last.speaker === l.speaker) last.text += ' ' + l.text;\n    else lines.push({ speaker: l.speaker, text: l.text });\n  }\n  const bodyWords = body.reduce((n, l) => n + words(l.text), 0);\n  wordCount = lines.reduce((n, l) => n + words(l.text), 0);\n  if (wordCount < cfg.minWords || wordCount > cfg.maxWords) {\n    const fixed = wordCount - bodyWords;\n    errors.push(`Your lines have ${bodyWords} words; they must have between ${cfg.minWords - fixed} and ${cfg.maxWords - fixed}. ${wordCount < cfg.minWords ? 'Write more.' : 'Write less.'}`);\n  }\n  if (typeof parsed.title !== 'string' || !parsed.title.trim()) errors.push('\"title\" is missing.');\n\n  const ids = new Set(news.items.map(i => i.id));\n  covered = [...new Set((Array.isArray(parsed.covered) ? parsed.covered : []).map(Number))].filter(n => ids.has(n));\n  if (mp.mode === 'news' && !covered.length) errors.push('\"covered\" must list the ids of the items you talked about.');\n}\n\nreturn [{\n  json: {\n    ok: errors.length === 0,\n    attempt: $runIndex + 1,\n    errors,\n    rawText,\n    script: {\n      title: parsed && typeof parsed.title === 'string' ? cleanText(parsed.title) : '',\n      summary: parsed && typeof parsed.summary === 'string' ? cleanText(parsed.summary) : '',\n      covered,\n      wordCount,\n      lines,\n    },\n  },\n}];"
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000030",
+      "name": "Valida roteiro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000031",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000032",
+      "name": "Roteiro OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7a2e4c10-podai-4d1e-9f00-000000000033",
+              "leftValue": "={{ $json.attempt }}",
+              "rightValue": "={{ $('Config').first().json.maxAttempts }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000034",
+      "name": "Tentar de novo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2860,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "={{ 'Roteiro reprovado após ' + $json.attempt + ' tentativas: ' + $json.errors.join(' | ') }}"
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000035",
+      "name": "Roteiro reprovado",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        3080,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Monta a chamada de TTS multi-speaker e o nome dos arquivos do episódio.\nconst cfg = $('Config').first().json;\nconst mp = $('Monta prompt').first().json;\nconst { script, attempt } = $input.first().json;\n\nconst text = [cfg.ttsStyle, '', ...script.lines.map(l => `${l.speaker}: ${l.text}`)].join('\\n');\nconst hhmm = new Intl.DateTimeFormat('en-GB', { timeZone: cfg.timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })\n  .format(new Date()).replace(':', '');\nconst fileBase = `${cfg.outDir.replace(/\\/+$/, '')}/${mp.date}-${hhmm}`;\n\nconst body = {\n  contents: [{ parts: [{ text }] }],\n  generationConfig: {\n    responseModalities: ['AUDIO'],\n    speechConfig: {\n      multiSpeakerVoiceConfig: {\n        speakerVoiceConfigs: [\n          { speaker: 'Lucas', voiceConfig: { prebuiltVoiceConfig: { voiceName: cfg.voiceLucas } } },\n          { speaker: 'Sarah', voiceConfig: { prebuiltVoiceConfig: { voiceName: cfg.voiceSarah } } },\n        ],\n      },\n    },\n  },\n};\nreturn [{ json: { body, fileBase, script, attempt } }];"
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000036",
+      "name": "Monta TTS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/' + $('Config').first().json.ttsModel + ':generateContent' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000037",
+      "name": "Gemini: TTS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "cJoCH4qpvsCDlSKg",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const res = $input.first().json;\nconst parts = (res.candidates && res.candidates[0] && res.candidates[0].content && res.candidates[0].content.parts) || [];\nconst part = parts.find(p => p.inlineData);\nif (!part) throw new Error('TTS sem áudio: ' + JSON.stringify(res).slice(0, 500));\nconst m = /rate=(\\d+)/.exec(part.inlineData.mimeType || '');\nreturn [{ json: { audio: part.inlineData.data, mimeType: part.inlineData.mimeType, sampleRate: m ? Number(m[1]) : 24000 } }];"
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000038",
+      "name": "Extrai áudio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "audio",
+        "options": {
+          "fileName": "={{ $('Monta TTS').first().json.fileBase.split('/').pop() }}.pcm",
+          "mimeType": "application/octet-stream"
+        }
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000039",
+      "name": "PCM para arquivo",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        3520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $('Monta TTS').first().json.fileBase }}.pcm",
+        "options": {}
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000040",
+      "name": "Grava PCM",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        3740,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=/files/bin/ffmpeg -hide_banner -loglevel error -y -f s16le -ar {{ $('Extrai áudio').first().json.sampleRate }} -ac 1 -i {{ $('Monta TTS').first().json.fileBase }}.pcm -af loudnorm=I=-16:TP=-1.5:LRA=11 -ar 44100 -ac 1 -b:a 64k {{ $('Monta TTS').first().json.fileBase }}.mp3 && rm -f {{ $('Monta TTS').first().json.fileBase }}.pcm && /files/bin/ffprobe -v error -show_entries format=duration -of csv=p=0 {{ $('Monta TTS').first().json.fileBase }}.mp3"
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000041",
+      "name": "MP3",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        3960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Relatório do episódio, gravado ao lado do MP3 para revisão (e base das show notes na Fase 3).\nconst cfg = $('Config').first().json;\nconst news = $('Trata notícias').first().json;\nconst mp = $('Monta prompt').first().json;\nconst v = $('Monta TTS').first().json;\nconst fileBase = v.fileBase;\nconst duration = Number(String($input.first().json.stdout || '').trim());\n\nconst warnings = [];\nif (!(duration >= 90 && duration <= 240)) warnings.push(`Duração fora de 1,5–4 min: ${duration}s`);\nif (news.failed.length) warnings.push(`Fontes com erro: ${news.failed.length}`);\n\nconst covered = new Set(v.script.covered);\nreturn [{\n  json: {\n    generatedAt: new Date().toISOString(),\n    date: mp.date,\n    mode: mp.mode,\n    topic: mp.topic,\n    title: v.script.title,\n    summary: v.script.summary,\n    mp3: `${fileBase}.mp3`,\n    durationSeconds: duration,\n    wordCount: v.script.wordCount,\n    scriptAttempts: v.attempt,\n    models: { text: cfg.textModel, tts: cfg.ttsModel, voices: { Lucas: cfg.voiceLucas, Sarah: cfg.voiceSarah } },\n    warnings,\n    sources: news.items.filter(i => covered.has(i.id)).map(i => ({ id: i.id, source: i.source, title: i.title, url: i.url, discussion: i.discussion })),\n    notCovered: news.items.filter(i => !covered.has(i.id)).map(i => ({ id: i.id, source: i.source, title: i.title })),\n    collection: { candidates: news.candidates, stats: news.stats, failed: news.failed },\n    lines: v.script.lines,\n  },\n}];"
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000042",
+      "name": "Resumo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {
+          "fileName": "={{ $('Monta TTS').first().json.fileBase.split('/').pop() }}.json"
+        }
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000043",
+      "name": "Resumo para arquivo",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        4400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $('Monta TTS').first().json.fileBase }}.json",
+        "options": {}
+      },
+      "id": "7a2e4c10-podai-4d1e-9f00-000000000044",
+      "name": "Grava resumo",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        4620,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "HN: Algolia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HN: Algolia": {
+      "main": [
+        [
+          {
+            "node": "Fontes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fontes": {
+      "main": [
+        [
+          {
+            "node": "RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS": {
+      "main": [
+        [
+          {
+            "node": "Trata notícias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trata notícias": {
+      "main": [
+        [
+          {
+            "node": "Arquivos de prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arquivos de prompt": {
+      "main": [
+        [
+          {
+            "node": "Baixa prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baixa prompts": {
+      "main": [
+        [
+          {
+            "node": "Monta prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monta prompt": {
+      "main": [
+        [
+          {
+            "node": "Prepara chamada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepara chamada": {
+      "main": [
+        [
+          {
+            "node": "Gemini: roteiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: roteiro": {
+      "main": [
+        [
+          {
+            "node": "Valida roteiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valida roteiro": {
+      "main": [
+        [
+          {
+            "node": "Roteiro OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Roteiro OK?": {
+      "main": [
+        [
+          {
+            "node": "Monta TTS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tentar de novo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tentar de novo?": {
+      "main": [
+        [
+          {
+            "node": "Prepara chamada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Roteiro reprovado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monta TTS": {
+      "main": [
+        [
+          {
+            "node": "Gemini: TTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: TTS": {
+      "main": [
+        [
+          {
+            "node": "Extrai áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrai áudio": {
+      "main": [
+        [
+          {
+            "node": "PCM para arquivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PCM para arquivo": {
+      "main": [
+        [
+          {
+            "node": "Grava PCM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grava PCM": {
+      "main": [
+        [
+          {
+            "node": "MP3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MP3": {
+      "main": [
+        [
+          {
+            "node": "Resumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumo": {
+      "main": [
+        [
+          {
+            "node": "Resumo para arquivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumo para arquivo": {
+      "main": [
+        [
+          {
+            "node": "Grava resumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}

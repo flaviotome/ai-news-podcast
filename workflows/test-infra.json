@@ -1,0 +1,218 @@
+{
+  "id": "PodAiTestInfra01",
+  "name": "Pod.AI - teste de infra",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c01",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "c1", "name": "textModel", "value": "gemini-2.5-flash", "type": "string" },
+            { "id": "c2", "name": "ttsModel", "value": "gemini-2.5-flash-preview-tts", "type": "string" },
+            { "id": "c3", "name": "voiceLucas", "value": "Puck", "type": "string" },
+            { "id": "c4", "name": "voiceSarah", "value": "Aoede", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c02",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [224, 0]
+    },
+    {
+      "parameters": {
+        "command": "/files/bin/ffmpeg -hide_banner -version && /files/bin/ffprobe -hide_banner -version && touch /files/podcast/.write-test && rm /files/podcast/.write-test && echo WRITE_OK"
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c03",
+      "name": "ffmpeg",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [448, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/repos/flaviotome/ai-news-podcast/git/blobs",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"content\": \"Pod.AI credential test\", \"encoding\": \"utf-8\" }",
+        "options": {}
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c04",
+      "name": "GitHub: blob",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [672, 0],
+      "credentials": {
+        "githubApi": { "id": "Pn5iJpVJeGZGSGzr", "name": "GitHub account" }
+      },
+      "notes": "Cria um blob solto (não entra em nenhum commit). Prova que o token tem Contents: write."
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "options": {}
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c05",
+      "name": "Gemini: modelos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0],
+      "credentials": {
+        "googlePalmApi": { "id": "cJoCH4qpvsCDlSKg", "name": "Google Gemini(PaLM) Api account 2" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/' + $('Config').first().json.textModel + ':generateContent' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"contents\": [{ \"parts\": [{ \"text\": \"Reply with exactly: Pod.AI text OK\" }] }] }",
+        "options": {}
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c06",
+      "name": "Gemini: texto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1104, 0],
+      "credentials": {
+        "googlePalmApi": { "id": "cJoCH4qpvsCDlSKg", "name": "Google Gemini(PaLM) Api account 2" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/' + $('Config').first().json.ttsModel + ':generateContent' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  contents: [{ parts: [{ text: [\n    'TTS the following conversation between Lucas and Sarah:',\n    \"Lucas: Hey everyone, welcome to Pod.AI, your daily dose of AI engineering news. I'm Lucas.\",\n    \"Sarah: And I'm Sarah. This is just a test, so if you can hear us, the pipeline works.\",\n    'Lucas: Fingers crossed the real episodes sound this good.',\n    'Sarah: Lower your expectations, Lucas. See you tomorrow!'\n  ].join('\\n') }] }],\n  generationConfig: {\n    responseModalities: ['AUDIO'],\n    speechConfig: { multiSpeakerVoiceConfig: { speakerVoiceConfigs: [\n      { speaker: 'Lucas', voiceConfig: { prebuiltVoiceConfig: { voiceName: $('Config').first().json.voiceLucas } } },\n      { speaker: 'Sarah', voiceConfig: { prebuiltVoiceConfig: { voiceName: $('Config').first().json.voiceSarah } } }\n    ] } }\n  }\n}) }}",
+        "options": {}
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c07",
+      "name": "Gemini: TTS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1328, 0],
+      "credentials": {
+        "googlePalmApi": { "id": "cJoCH4qpvsCDlSKg", "name": "Google Gemini(PaLM) Api account 2" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const res = $input.first().json;\nconst part = res.candidates?.[0]?.content?.parts?.find(p => p.inlineData);\nif (!part) throw new Error('TTS sem áudio: ' + JSON.stringify(res).slice(0, 500));\nreturn [{ json: { audio: part.inlineData.data, mimeType: part.inlineData.mimeType } }];"
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c08",
+      "name": "Extrai áudio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1552, 0]
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "audio",
+        "options": { "fileName": "test.pcm", "mimeType": "application/octet-stream" }
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c09",
+      "name": "PCM para arquivo",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [1760, 0]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/files/podcast/test.pcm",
+        "options": {}
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c10",
+      "name": "Grava PCM",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [1984, 0]
+    },
+    {
+      "parameters": {
+        "command": "=/files/bin/ffmpeg -hide_banner -loglevel error -y -f s16le -ar {{ ($('Extrai áudio').first().json.mimeType.match(/rate=(\\d+)/) || [0, 24000])[1] }} -ac 1 -i /files/podcast/test.pcm -af loudnorm=I=-16:TP=-1.5:LRA=11 -ar 44100 -ac 1 -b:a 64k /files/podcast/test.mp3 && /files/bin/ffprobe -v error -show_entries format=duration -of csv=p=0 /files/podcast/test.mp3"
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c11",
+      "name": "MP3",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2208, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const names = ($('Gemini: modelos').first().json.models || []).map(m => m.name.replace('models/', ''));\nreturn [{ json: {\n  at: new Date().toISOString(),\n  ffmpeg: $('ffmpeg').first().json.stdout.split('\\n').filter(l => /version|WRITE_OK/.test(l)),\n  github_blob_sha: $('GitHub: blob').first().json.sha,\n  gemini_text: $('Gemini: texto').first().json.candidates?.[0]?.content?.parts?.[0]?.text?.trim(),\n  tts_mime: $('Extrai áudio').first().json.mimeType,\n  mp3_duration_s: Number($input.first().json.stdout.trim()),\n  tts_models: names.filter(n => /tts/i.test(n)),\n  flash_models: names.filter(n => /flash/i.test(n) && !/tts|image|audio|live/i.test(n))\n} }];"
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c12",
+      "name": "Resumo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2432, 0]
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": { "fileName": "test-result.json" }
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c13",
+      "name": "Resumo para arquivo",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [2640, 0]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/files/podcast/test-result.json",
+        "options": {}
+      },
+      "id": "6c1f0a52-1d0e-4b7a-9a51-0f3e2a7b9c14",
+      "name": "Grava resumo",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [2864, 0]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "Config", "type": "main", "index": 0 }]] },
+    "Config": { "main": [[{ "node": "ffmpeg", "type": "main", "index": 0 }]] },
+    "ffmpeg": { "main": [[{ "node": "GitHub: blob", "type": "main", "index": 0 }]] },
+    "GitHub: blob": { "main": [[{ "node": "Gemini: modelos", "type": "main", "index": 0 }]] },
+    "Gemini: modelos": { "main": [[{ "node": "Gemini: texto", "type": "main", "index": 0 }]] },
+    "Gemini: texto": { "main": [[{ "node": "Gemini: TTS", "type": "main", "index": 0 }]] },
+    "Gemini: TTS": { "main": [[{ "node": "Extrai áudio", "type": "main", "index": 0 }]] },
+    "Extrai áudio": { "main": [[{ "node": "PCM para arquivo", "type": "main", "index": 0 }]] },
+    "PCM para arquivo": { "main": [[{ "node": "Grava PCM", "type": "main", "index": 0 }]] },
+    "Grava PCM": { "main": [[{ "node": "MP3", "type": "main", "index": 0 }]] },
+    "MP3": { "main": [[{ "node": "Resumo", "type": "main", "index": 0 }]] },
+    "Resumo": { "main": [[{ "node": "Resumo para arquivo", "type": "main", "index": 0 }]] },
+    "Resumo para arquivo": { "main": [[{ "node": "Grava resumo", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}
